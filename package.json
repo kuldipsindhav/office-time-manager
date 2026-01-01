@@ -1,0 +1,34 @@
+{
+  "name": "office-time-manager",
+  "version": "1.0.0",
+  "description": "NFC-based Punch In/Punch Out System with Login & User Profile Settings",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "test": "cd backend && npm test",
+    "build": "cd frontend && npm install && npm run build",
+    "build:backend": "cd backend && npm install",
+    "build:full": "npm run build:backend && npm run build",
+    "start": "node server-production.js",
+    "start:dev": "NODE_ENV=development node server-production.js",
+    "deploy:render": "npm run build:full && git push",
+    "deploy:railway": "railway up",
+    "deploy:vercel": "vercel --prod"
+  },
+  "dependencies": {
+    "compression": "^1.7.4",
+    "dotenv": "^16.3.1",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
