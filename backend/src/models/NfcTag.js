@@ -10,7 +10,7 @@ const nfcTagSchema = new mongoose.Schema({
     trim: true,
     index: true
   },
-  
+
   // Assigned User
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -18,13 +18,13 @@ const nfcTagSchema = new mongoose.Schema({
     required: [true, 'User ID is required'],
     index: true
   },
-  
+
   // Tag Status
   isActive: {
     type: Boolean,
     default: true
   },
-  
+
   // Tag Label/Name
   label: {
     type: String,
@@ -32,7 +32,7 @@ const nfcTagSchema = new mongoose.Schema({
     maxlength: [100, 'Label cannot exceed 100 characters'],
     default: null
   },
-  
+
   // Registration Info
   registeredBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -43,13 +43,13 @@ const nfcTagSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  
+
   // Last Used
   lastUsedAt: {
     type: Date,
     default: null
   },
-  
+
   // Deactivation Info
   deactivatedBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -69,19 +69,20 @@ const nfcTagSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Compound index
-nfcTagSchema.index({ uid: 1, isActive: 1 });
+// Compound indexes for common queries
+nfcTagSchema.index({ uid: 1, isActive: 1 });  // Find active tag by UID
+nfcTagSchema.index({ userId: 1, isActive: 1 });  // User's active tags
 
 // Static method to find active tag by UID
-nfcTagSchema.statics.findActiveByUID = async function(uid) {
-  return await this.findOne({ 
-    uid: uid.toUpperCase(), 
-    isActive: true 
+nfcTagSchema.statics.findActiveByUID = async function (uid) {
+  return await this.findOne({
+    uid: uid.toUpperCase(),
+    isActive: true
   }).populate('userId', 'name email role isActive');
 };
 
 // Instance method to deactivate tag
-nfcTagSchema.methods.deactivate = async function(userId, reason) {
+nfcTagSchema.methods.deactivate = async function (userId, reason) {
   this.isActive = false;
   this.deactivatedBy = userId;
   this.deactivatedAt = new Date();
@@ -90,7 +91,7 @@ nfcTagSchema.methods.deactivate = async function(userId, reason) {
 };
 
 // Instance method to record usage
-nfcTagSchema.methods.recordUsage = async function() {
+nfcTagSchema.methods.recordUsage = async function () {
   this.lastUsedAt = new Date();
   return await this.save();
 };

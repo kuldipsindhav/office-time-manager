@@ -25,14 +25,14 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Password must be at least 6 characters'],
     select: false // Don't return password by default
   },
-  
+
   // Role
   role: {
     type: String,
     enum: ['Admin', 'User'],
     default: 'User'
   },
-  
+
   // Profile Settings (User can configure)
   profile: {
     timezone: {
@@ -56,13 +56,13 @@ const userSchema = new mongoose.Schema({
       default: 'NFC'
     }
   },
-  
+
   // Account Status
   isActive: {
     type: Boolean,
     default: true
   },
-  
+
   // Refresh Token for JWT
   refreshToken: {
     type: String,
@@ -72,13 +72,16 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries (email index already created by unique: true)
-userSchema.index({ role: 1 });
+// Indexes for faster queries (email index already created by unique: true)
+userSchema.index({ role: 1 });  // Admin user queries
+userSchema.index({ isActive: 1 });  // Active/inactive users
+userSchema.index({ role: 1, isActive: 1 });  // Filter active users by role
+userSchema.index({ createdAt: -1 });  // Recent users
 
 // Hash password before saving
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  
+
   try {
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
@@ -89,12 +92,12 @@ userSchema.pre('save', async function(next) {
 });
 
 // Compare password method
-userSchema.methods.comparePassword = async function(candidatePassword) {
+userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
 // Get public profile (without sensitive data)
-userSchema.methods.toPublicJSON = function() {
+userSchema.methods.toPublicJSON = function () {
   return {
     id: this._id,
     name: this.name,

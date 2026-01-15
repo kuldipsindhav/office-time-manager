@@ -1,8 +1,9 @@
 /**
  * Security Middleware Configuration
- * Add these to your backend for production-ready security
+ * Production-ready security for Office Time Manager
  */
 
+const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
@@ -12,27 +13,71 @@ const hpp = require('hpp');
  * Rate Limiting Configuration
  * Prevents brute force attacks
  */
-const createRateLimiter = (windowMs = 15 * 60 * 1000, max = 100) => {
+const createRateLimiter = (windowMs = 15 * 60 * 1000, max = 100, message = 'Too many requests from this IP, please try again later.') => {
     return rateLimit({
         windowMs, // 15 minutes default
         max, // limit each IP to max requests per windowMs
-        message: 'Too many requests from this IP, please try again later.',
+        message: { success: false, message },
         standardHeaders: true,
         legacyHeaders: false,
+        skipSuccessfulRequests: false,
     });
 };
 
 // Specific rate limiters for different endpoints
-const authLimiter = createRateLimiter(15 * 60 * 1000, 5); // 5 requests per 15 minutes
-const apiLimiter = createRateLimiter(15 * 60 * 1000, 100); // 100 requests per 15 minutes
-const punchLimiter = createRateLimiter(1 * 60 * 1000, 10); // 10 punches per minute
+const authLimiter = createRateLimiter(
+    15 * 60 * 1000,
+    20, // 20 auth requests per 15 minutes (login, register, refresh)
+    'Too many authentication attempts, please try again after 15 minutes.'
+);
+
+const apiLimiter = createRateLimiter(
+    15 * 60 * 1000,
+    100, // 100 API requests per 15 minutes
+    'Too many API requests, please try again later.'
+);
+
+const punchLimiter = createRateLimiter(
+    1 * 60 * 1000,
+    10, // 10 punches per minute (generous for NFC scan issues)
+    'Too many punch attempts, please wait a minute.'
+);
+
+/**
+ * Helmet Configuration for Security Headers
+ */
+const helmetMiddleware = helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'"],
+            fontSrc: ["'self'"],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            frameSrc: ["'none'"],
+        },
+    },
+    crossOriginEmbedderPolicy: false, // Disable for API compatibility
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+});
 
 /**
  * Security Middleware Stack
  */
 const securityMiddleware = [
+    // Security headers
+    helmetMiddleware,
+
     // Data Sanitization against NoSQL Injection
-    mongoSanitize(),
+    mongoSanitize({
+        replaceWith: '_',
+        onSanitize: ({ req, key }) => {
+            console.warn(`[Security] Blocked NoSQL injection attempt on key: ${key}`);
+        }
+    }),
 
     // Data Sanitization against XSS
     xss(),
@@ -46,29 +91,16 @@ const securityMiddleware = [
             'timezone',
             'page',
             'limit',
-            'sort'
+            'sort',
+            'startDate',
+            'endDate'
         ]
     })
 ];
 
-/**
- * Apply to Express App
- * 
- * Usage in server.js:
- * 
- * const { securityMiddleware, authLimiter, apiLimiter, punchLimiter } = require('./middleware/security');
- * 
- * // Apply security middleware
- * app.use(securityMiddleware);
- * 
- * // Apply rate limiting
- * app.use('/api/auth', authLimiter);
- * app.use('/api/punch', punchLimiter);
- * app.use('/api', apiLimiter);
- */
-
 module.exports = {
     securityMiddleware,
+    helmetMiddleware,
     authLimiter,
     apiLimiter,
     punchLimiter,
