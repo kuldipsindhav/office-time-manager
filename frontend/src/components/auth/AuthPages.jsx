@@ -120,15 +120,6 @@ export const LoginPage = () => {
             </p>
           </div>
         </Card>
-
-        {/* Demo Credentials */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm font-medium text-blue-800 mb-2">Demo Credentials:</p>
-          <div className="text-sm text-blue-700 space-y-1">
-            <p>Admin: admin@example.com / admin123</p>
-            <p>User: john@example.com / password123</p>
-          </div>
-        </div>
       </div>
     </div>
   );
