@@ -12,6 +12,8 @@ import {
   X
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import NotificationCenter from '../ui/NotificationCenter';
+import NotificationPermissionPrompt from '../ui/NotificationPermissionPrompt';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
@@ -143,25 +145,38 @@ export const Layout = ({ children }) => {
       {/* Main Content */}
       <div className="lg:pl-64">
         {/* Mobile Header */}
-        <header className="sticky top-0 z-30 flex items-center h-16 px-4 bg-white border-b border-gray-200 lg:hidden">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-lg hover:bg-gray-100"
-          >
-            <Menu className="w-6 h-6 text-gray-600" />
-          </button>
-          <div className="flex items-center gap-2 ml-4">
-            <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-              <Clock className="w-5 h-5 text-white" />
+        <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 bg-white border-b border-gray-200 lg:hidden">
+          <div className="flex items-center">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-lg hover:bg-gray-100"
+            >
+              <Menu className="w-6 h-6 text-gray-600" />
+            </button>
+            <div className="flex items-center gap-2 ml-4">
+              <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
+                <Clock className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-bold text-gray-900">TimeManager</span>
             </div>
-            <span className="font-bold text-gray-900">TimeManager</span>
           </div>
+          
+          {/* Notification Bell for Mobile */}
+          <NotificationCenter />
+        </header>
+
+        {/* Desktop Header with Notification Bell */}
+        <header className="hidden lg:flex sticky top-0 z-30 items-center justify-end h-16 px-6 bg-white border-b border-gray-200">
+          <NotificationCenter />
         </header>
 
         {/* Page Content */}
         <main className="p-4 lg:p-6">
           {children}
         </main>
+
+        {/* Notification Permission Prompt */}
+        <NotificationPermissionPrompt />
       </div>
     </div>
   );

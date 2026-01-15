@@ -10,6 +10,8 @@ import {
   Trash2
 } from 'lucide-react';
 import { Card, ProgressBar, Badge, Button, LoadingSpinner, Modal, Input, Select } from '../ui';
+import { LiveTimer, CountdownTimer } from '../ui/LiveTimer';
+import { DashboardAlerts, PunchIssuesList } from '../ui/WarningBanner';
 import { useDashboard } from '../../hooks';
 import { punchService } from '../../services';
 import toast from 'react-hot-toast';
@@ -111,6 +113,27 @@ export const DashboardPage = () => {
           Refresh
         </Button>
       </div>
+
+      {/* Alerts Section */}
+      {dashboard?.alerts && (
+        <DashboardAlerts alerts={dashboard.alerts} />
+      )}
+
+      {/* Live Timer (if working) */}
+      {dashboard?.status === 'WORKING' && dashboard?.lastPunch && (
+        <LiveTimer
+          startTime={dashboard.lastPunch.time}
+          isActive={true}
+        />
+      )}
+
+      {/* Countdown to Target (if working) */}
+      {dashboard?.status === 'WORKING' && dashboard?.predictedExit && (
+        <CountdownTimer
+          targetTime={dashboard.predictedExit.time}
+          label="Time until daily target"
+        />
+      )}
 
       {/* Status Card */}
       <Card className="p-6">

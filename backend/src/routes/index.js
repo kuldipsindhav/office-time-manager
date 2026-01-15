@@ -4,6 +4,7 @@ const punchRoutes = require('./punch');
 const nfcRoutes = require('./nfc');
 const dashboardRoutes = require('./dashboard');
 const adminRoutes = require('./admin');
+const adminHealthRoutes = require('./adminHealth');
 
 module.exports = {
   authRoutes,
@@ -11,5 +12,6 @@ module.exports = {
   punchRoutes,
   nfcRoutes,
   dashboardRoutes,
-  adminRoutes
+  adminRoutes,
+  adminHealthRoutes
 };

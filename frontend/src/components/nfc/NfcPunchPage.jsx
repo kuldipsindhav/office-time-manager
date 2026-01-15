@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, User, Loader2, AlertTriangle } from 'lucide-react';
 import { nfcService } from '../../services';
 
 const NfcPunchPage = () => {
   const { uid } = useParams();
+  const navigate = useNavigate();
   const [status, setStatus] = useState('loading'); // loading, punching, success, error, closing, duplicate
   const [userData, setUserData] = useState(null);
   const [punchData, setPunchData] = useState(null);
@@ -24,12 +25,10 @@ const NfcPunchPage = () => {
       }, 1000);
       return () => clearTimeout(timer);
     } else if (status === 'closing' && countdown === 0) {
-      // Try to close the window
-      window.close();
-      // If window.close() doesn't work (common in browsers), show a message
-      setStatus('done');
+      // Redirect to login page
+      navigate('/login');
     }
-  }, [status, countdown]);
+  }, [status, countdown, navigate]);
 
   const checkAndPunch = async () => {
     // Check if this NFC was punched recently (within 60 seconds)
@@ -89,7 +88,7 @@ const NfcPunchPage = () => {
   }
 
   // Success State
-  if (status === 'success' || status === 'closing' || status === 'done') {
+  if (status === 'success' || status === 'closing') {
     const isIN = punchData?.punch?.type === 'IN';
     
     return (
@@ -119,15 +118,7 @@ const NfcPunchPage = () => {
           {status === 'closing' && (
             <div className="mt-6 p-3 bg-gray-100 rounded-lg">
               <p className="text-sm text-gray-500">
-                Window closing in <span className="font-bold text-gray-700">{countdown}</span> seconds...
-              </p>
-            </div>
-          )}
-
-          {status === 'done' && (
-            <div className="mt-6 p-3 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-600">
-                ✓ You can close this window now
+                Redirecting in <span className="font-bold text-gray-700">{countdown}</span> seconds...
               </p>
             </div>
           )}
@@ -150,10 +141,10 @@ const NfcPunchPage = () => {
           <p className="text-gray-600 mt-2">{errorMessage}</p>
           
           <button
-            onClick={() => window.close()}
+            onClick={() => navigate('/login')}
             className="w-full mt-6 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
           >
-            Close Window
+            Go to Login
           </button>
         </div>
       </div>
@@ -174,10 +165,10 @@ const NfcPunchPage = () => {
           <p className="text-gray-600 mt-2">{errorMessage}</p>
           
           <button
-            onClick={() => window.close()}
+            onClick={() => navigate('/login')}
             className="w-full mt-6 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
           >
-            Close Window
+            Go to Login
           </button>
         </div>
       </div>

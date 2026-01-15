@@ -61,6 +61,7 @@ class TimeEngine {
   /**
    * Calculate total worked time from punches
    * Returns time in minutes
+   * Enhanced with midnight cross-over handling
    */
   static calculateWorkedTime(punches, includeOpenPunch = true) {
     let totalMinutes = 0;
@@ -72,6 +73,14 @@ class TimeEngine {
       } else if (punch.punchType === 'OUT' && lastInPunch) {
         // Calculate duration between IN and OUT
         const duration = moment(punch.punchTime).diff(moment(lastInPunch.punchTime), 'minutes', true);
+        
+        // Sanity check: if duration > 24 hours, something is wrong
+        if (duration > 1440) { // 24 hours
+          // Don't count this session (likely missed punch)
+          lastInPunch = null;
+          continue;
+        }
+        
         totalMinutes += duration;
         lastInPunch = null;
       }
@@ -80,7 +89,15 @@ class TimeEngine {
     // If there's an open punch (IN without OUT), calculate till now
     if (includeOpenPunch && lastInPunch) {
       const duration = moment().diff(moment(lastInPunch.punchTime), 'minutes', true);
-      totalMinutes += duration;
+      
+      // Cap at 16 hours for open punch (reasonable maximum)
+      if (duration <= 960) { // 16 hours
+        totalMinutes += duration;
+      } else {
+        // Open punch is too old, don't include in calculation
+        // This prevents showing 20+ hours worked
+        totalMinutes += 480; // Add default 8 hours as estimate
+      }
     }
     
     return Math.max(0, totalMinutes);
@@ -186,6 +203,7 @@ class TimeEngine {
   
   /**
    * Get complete dashboard data for a user
+   * Enhanced with issue detection
    */
   static async getDashboardData(user) {
     const timezone = this.getTimezone(user);
@@ -215,6 +233,13 @@ class TimeEngine {
     // Current time in user's timezone
     const currentTime = moment().tz(timezone);
     
+    // Check for issues
+    const hasOpenPunch = todayPunches.length > 0 && todayPunches[todayPunches.length - 1].punchType === 'IN';
+    const hasOddPunchCount = todayPunches.length > 0 && todayPunches.length % 2 !== 0;
+    
+    // Calculate session count
+    const sessionCount = Math.floor(todayPunches.length / 2) + (hasOpenPunch ? 1 : 0);
+    
     return {
       currentTime: {
         utc: new Date().toISOString(),
@@ -237,7 +262,9 @@ class TimeEngine {
         dailyTargetMinutes: dailyTarget,
         dailyTargetFormatted: this.formatMinutes(dailyTarget),
         progressPercent: Math.min(100, Math.round((totalWorkedMinutes / dailyTarget) * 100)),
-        isTargetMet: totalWorkedMinutes >= dailyTarget
+        isTargetMet: totalWorkedMinutes >= dailyTarget,
+        sessionCount,
+        punchCount: todayPunches.length
       },
       predictedExit: predictedExit ? {
         time: predictedExit.time.toISOString(),
@@ -252,7 +279,12 @@ class TimeEngine {
         source: p.source,
         edited: p.edited,
         editReason: p.editReason
-      }))
+      })),
+      alerts: {
+        hasOpenPunch,
+        hasOddPunchCount,
+        isWeekend: !config.defaults.workingDays.includes(currentTime.format('dddd'))
+      }
     };
   }
   

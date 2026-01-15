@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const config = require('./index');
+const logger = require('../utils/logger');
 
 const connectDB = async () => {
   try {
@@ -7,27 +8,31 @@ const connectDB = async () => {
       // MongoDB driver options
     });
     
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    logger.info(`✅ MongoDB Connected: ${conn.connection.host}`);
     
     // Handle connection events
     mongoose.connection.on('error', (err) => {
-      console.error('MongoDB connection error:', err);
+      logger.error('MongoDB connection error:', err);
     });
     
     mongoose.connection.on('disconnected', () => {
-      console.log('MongoDB disconnected');
+      logger.warn('MongoDB disconnected');
+    });
+    
+    mongoose.connection.on('reconnected', () => {
+      logger.info('MongoDB reconnected');
     });
     
     // Graceful shutdown
     process.on('SIGINT', async () => {
       await mongoose.connection.close();
-      console.log('MongoDB connection closed through app termination');
+      logger.info('MongoDB connection closed through app termination');
       process.exit(0);
     });
     
     return conn;
   } catch (error) {
-    console.error('❌ MongoDB connection failed:', error.message);
+    logger.error('❌ MongoDB connection failed:', { message: error.message, stack: error.stack });
     process.exit(1);
   }
 };

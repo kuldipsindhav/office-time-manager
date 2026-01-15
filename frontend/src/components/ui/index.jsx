@@ -175,3 +175,7 @@ export const ProgressBar = ({ value, max = 100, className = '' }) => {
     </div>
   );
 };
+
+// Export new components
+export { WarningBanner, PunchIssuesList, ValidationWarnings, DashboardAlerts } from './WarningBanner';
+export { LiveTimer, CountdownTimer } from './LiveTimer';

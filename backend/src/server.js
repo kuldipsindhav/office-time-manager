@@ -2,7 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/database');
 const config = require('./config');
+const logger = require('./utils/logger');
+const { validateEnv } = require('./utils/validateEnv');
+const HealthService = require('./services/HealthService');
+const CronJobService = require('./services/CronJobService');
 const { errorHandler, notFound } = require('./middleware');
+const { requestLogger, errorLogger } = require('./middleware/logger');
 const {
   securityMiddleware,
   authLimiter,
@@ -15,11 +20,23 @@ const {
   punchRoutes,
   nfcRoutes,
   dashboardRoutes,
-  adminRoutes
+  adminRoutes,
+  adminHealthRoutes
 } = require('./routes');
+
+// Validate environment variables
+try {
+  validateEnv();
+} catch (error) {
+  logger.error('Environment validation failed:', error);
+  process.exit(1);
+}
 
 // Initialize express
 const app = express();
+
+// Log application startup
+logger.info('🚀 Starting Office Time Manager API...');
 
 // Trust proxy (for rate limiting behind reverse proxy)
 app.set('trust proxy', 1);
@@ -51,20 +68,44 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request logging
+app.use(requestLogger);
+
 // Apply security middleware (XSS, NoSQL injection, HPP protection)
 app.use(securityMiddleware);
 
 // Apply general API rate limiting
 app.use('/api', apiLimiter);
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Office Time Manager API is running',
-    timestamp: new Date().toISOString(),
-    environment: config.nodeEnv
+// Health check endpoints
+app.get('/health', async (req, res) => {
+  const health = await HealthService.getQuickHealth();
+  const statusCode = health.status === 'healthy' ? 200 : 503;
+  res.status(statusCode).json(health);
+});
+
+app.get('/api/health', async (req, res) => {
+  const health = await HealthService.getHealthStatus();
+  const statusCode = health.status === 'healthy' ? 200 : 503;
+  res.status(statusCode).json({
+    success: health.status === 'healthy',
+    ...health
   });
+});
+
+app.get('/api/health/metrics', async (req, res) => {
+  try {
+    const metrics = await HealthService.getMetrics();
+    res.json({
+      success: true,
+      data: metrics
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get metrics'
+    });
+  }
 });
 
 // Root redirect
@@ -79,6 +120,10 @@ app.use('/api/punch', punchLimiter, punchRoutes);  // 10 punches per minute
 app.use('/api/nfc', nfcRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/health', adminHealthRoutes);  // Admin health check routes
+
+// Error Logging Middleware
+app.use(errorLogger);
 
 // Error Handlers
 app.use(notFound);
@@ -87,8 +132,8 @@ app.use(errorHandler);
 // Start server
 const PORT = config.port;
 
-app.listen(PORT, () => {
-  console.log(`
+const server = app.listen(PORT, () => {
+  logger.info(`
 ╔══════════════════════════════════════════════════╗
 ║     🕐 Office Time Manager API Server            ║
 ║══════════════════════════════════════════════════║
@@ -97,6 +142,38 @@ app.listen(PORT, () => {
 ║  API: http://localhost:${PORT}/api${' '.repeat(19)}║
 ╚══════════════════════════════════════════════════╝
   `);
+  logger.info(`Server running on port ${PORT} in ${config.nodeEnv} mode`);
+  
+  // Initialize cron jobs
+  CronJobService.initializeJobs();
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM signal received: closing HTTP server');
+  CronJobService.stopAllJobs();
+  server.close(() => {
+    logger.info('HTTP server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT signal received: closing HTTP server');
+  CronJobService.stopAllJobs();
+  server.close(() => {
+    logger.info('HTTP server closed');
+    process.exit(0);
+  });
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', { promise, reason });
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  process.exit(1);
 });
 
 module.exports = app;

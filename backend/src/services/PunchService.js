@@ -1,6 +1,9 @@
 const { PunchLog, NfcTag, AuditLog } = require('../models');
 const TimeEngine = require('./TimeEngine');
+const PunchValidator = require('./PunchValidator');
+const EmailService = require('./EmailService');
 const moment = require('moment-timezone');
+const config = require('../config');
 
 /**
  * Punch Service
@@ -9,19 +12,72 @@ const moment = require('moment-timezone');
 class PunchService {
   
   /**
-   * Create a new punch
+   * Create a new punch with comprehensive validation
    */
   static async createPunch(user, options = {}) {
-    const { source = 'Manual', nfcUID = null, notes = null } = options;
+    const { source = 'Manual', nfcUID = null, notes = null, skipValidation = false } = options;
+    
+    const timezone = TimeEngine.getTimezone(user);
+    const punchTime = new Date();
     
     // Check for double punch
-    const isDouble = await TimeEngine.isDoublePunch(user._id, new Date());
+    const isDouble = await TimeEngine.isDoublePunch(user._id, punchTime);
     if (isDouble) {
       throw new Error('Double punch detected. Please wait at least 1 minute between punches.');
     }
     
     // Determine punch type
     const punchType = await TimeEngine.getNextPunchType(user._id);
+    
+    // Perform comprehensive validation (unless skipped)
+    if (!skipValidation) {
+      const validation = await PunchValidator.validatePunch(
+        user._id,
+        punchType,
+        punchTime,
+        timezone,
+        {
+          businessHours: user.profile?.businessHours,
+          workingDays: user.profile?.workingDays,
+          graceMinutes: user.profile?.graceMinutes,
+          shiftStartTime: user.profile?.shiftStartTime,
+          minimumWorkHours: user.profile?.minimumWorkHours
+        }
+      );
+      
+      // If validation has errors, throw
+      if (!validation.valid) {
+        const error = new Error(validation.summary.errors[0]);
+        error.validationErrors = validation.summary.errors;
+        error.code = 'VALIDATION_ERROR';
+        throw error;
+      }
+      
+      // If validation has warnings, include them in response
+      if (validation.hasWarnings) {
+        options.validationWarnings = validation.summary.warnings;
+        
+        // Send notifications for specific warnings
+        if (validation.validations.workingDay?.isWeekend) {
+          // Send weekend punch notification
+          try {
+            await EmailService.sendWeekendPunchWarning(user, {
+              punchType,
+              punchTime
+            });
+          } catch (emailError) {
+            // Don't fail punch if email fails
+            console.error('Failed to send weekend warning email:', emailError);
+          }
+        }
+        
+        if (validation.validations.gracePeriod?.isLate) {
+          // Mark as late in notes
+          options.isLate = true;
+          options.minutesLate = validation.validations.gracePeriod.minutesLate;
+        }
+      }
+    }
     
     // Handle NFC validation if source is NFC
     let nfcTag = null;
@@ -44,28 +100,39 @@ class PunchService {
       await nfcTag.recordUsage();
     }
     
+    // Build notes with validation info
+    let finalNotes = notes || '';
+    if (options.isLate) {
+      finalNotes = finalNotes ? `${finalNotes} | Late by ${options.minutesLate} minutes` : `Late by ${options.minutesLate} minutes`;
+    }
+    
     // Create punch
     const punch = await PunchLog.create({
       userId: user._id,
       punchType,
-      punchTime: new Date(),
+      punchTime,
       source,
       nfcTagId: nfcTag?._id || null,
-      notes
+      notes: finalNotes || null
     });
     
     // Get updated dashboard data
     const dashboardData = await TimeEngine.getDashboardData(user);
+    
+    // Detect and return any punch issues
+    const punchIssues = await PunchValidator.detectPunchIssues(user._id, timezone);
     
     return {
       punch: {
         id: punch._id,
         type: punch.punchType,
         time: punch.punchTime.toISOString(),
-        timeLocal: moment(punch.punchTime).tz(TimeEngine.getTimezone(user)).format('hh:mm A'),
+        timeLocal: moment(punch.punchTime).tz(timezone).format('hh:mm A'),
         source: punch.source
       },
-      dashboard: dashboardData
+      dashboard: dashboardData,
+      warnings: options.validationWarnings || [],
+      issues: punchIssues
     };
   }
   

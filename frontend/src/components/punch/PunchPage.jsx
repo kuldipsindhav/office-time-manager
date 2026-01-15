@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Wifi, WifiOff, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { Card, Button, Badge, LoadingSpinner } from '../ui';
+import { PunchIssuesList, ValidationWarnings } from '../ui/WarningBanner';
+import { LiveTimer } from '../ui/LiveTimer';
 import { useNfc, useDashboard } from '../../hooks';
+import useNotifications from '../../hooks/useNotifications';
 import { punchService, nfcService } from '../../services';
 import toast from 'react-hot-toast';
 
 export const PunchPage = () => {
   const { dashboard, refresh } = useDashboard();
   const { isSupported, isReading, startReading, stopReading, error: nfcError } = useNfc();
+  const { sendPunchSuccess } = useNotifications();
   const [punching, setPunching] = useState(false);
   const [lastAction, setLastAction] = useState(null);
+  const [punchWarnings, setPunchWarnings] = useState([]);
+  const [punchIssues, setPunchIssues] = useState([]);
 
   useEffect(() => {
     if (isSupported) {
@@ -36,6 +42,10 @@ export const PunchPage = () => {
       });
       
       toast.success(response.message);
+      
+      // Send notification
+      sendPunchSuccess(response.data.punch.type, response.data.punch.timeLocal);
+      
       refresh();
     } catch (error) {
       setLastAction({
@@ -64,14 +74,37 @@ export const PunchPage = () => {
         time: response.data.punch.timeLocal
       });
       
-      toast.success(response.message);
+      // Set warnings and issues from response
+      if (response.data.warnings && response.data.warnings.length > 0) {
+        setPunchWarnings(response.data.warnings);
+        toast.warning('Punch recorded with warnings');
+      } else {
+        setPunchWarnings([]);
+        toast.success(response.message);
+      }
+      
+      if (response.data.issues && response.data.issues.length > 0) {
+        setPunchIssues(response.data.issues);
+      } else {
+        setPunchIssues([]);
+      }
+      
+      // Send notification
+      sendPunchSuccess(response.data.punch.type, response.data.punch.timeLocal);
+      
       refresh();
     } catch (error) {
       setLastAction({
         success: false,
         message: error.response?.data?.message || 'Punch failed'
       });
-      toast.error(error.response?.data?.message || 'Punch failed');
+      
+      // Handle validation errors
+      if (error.response?.data?.code === 'VALIDATION_ERROR') {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error(error.response?.data?.message || 'Punch failed');
+      }
     } finally {
       setPunching(false);
     }
@@ -109,9 +142,32 @@ export const PunchPage = () => {
             <p className="text-gray-500 mt-2">
               Today: {dashboard?.todayStats?.totalWorkedFormatted || '0h 0m'}
             </p>
+            {dashboard?.todayStats?.sessionCount > 1 && (
+              <p className="text-sm text-blue-600 mt-1">
+                {dashboard.todayStats.sessionCount} sessions today
+              </p>
+            )}
           </div>
         </div>
       </Card>
+
+      {/* Live Timer */}
+      {dashboard?.status === 'WORKING' && dashboard?.lastPunch && (
+        <LiveTimer
+          startTime={dashboard.lastPunch.time}
+          isActive={true}
+        />
+      )}
+
+      {/* Punch Warnings */}
+      {punchWarnings.length > 0 && (
+        <ValidationWarnings warnings={punchWarnings} />
+      )}
+
+      {/* Punch Issues */}
+      {punchIssues.length > 0 && (
+        <PunchIssuesList issues={punchIssues} />
+      )}
 
       {/* NFC Status */}
       <Card className="p-6">

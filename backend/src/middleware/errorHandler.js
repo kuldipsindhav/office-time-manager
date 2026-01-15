@@ -1,6 +1,8 @@
+const logger = require('../utils/logger');
+
 // Global Error Handler Middleware
 const errorHandler = (err, req, res, next) => {
-  console.error('Error:', err);
+  logger.logError(err, req);
   
   // Default error
   let error = {
