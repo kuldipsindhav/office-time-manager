@@ -83,7 +83,7 @@ app.use(compression());
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
-    message: 'Office Time Manager API is running',
+    message: 'Time Manager API is running',
     timestamp: new Date().toISOString(),
     environment: config.nodeEnv,
     version: '1.0.0'
@@ -135,7 +135,7 @@ const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
   console.log(`
 ╔══════════════════════════════════════════════════╗
-║   🕐 Office Time Manager - Production Server     ║
+║   🕐 Time Manager - Production Server     ║
 ║══════════════════════════════════════════════════║
 ║  Environment: ${config.nodeEnv.padEnd(34)}║
 ║  Port: ${String(PORT).padEnd(42)}║

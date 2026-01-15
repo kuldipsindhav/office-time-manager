@@ -10,14 +10,14 @@ const logger = require('../utils/logger');
  * EMAIL_PORT=587
  * EMAIL_USER=your-email@gmail.com
  * EMAIL_PASSWORD=your-app-password
- * EMAIL_FROM=Office Time Manager <noreply@yourdomain.com>
+ * EMAIL_FROM=Time Manager <noreply@yourdomain.com>
  */
 
 class EmailService {
   constructor() {
     this.enabled = false;
     this.transporter = null;
-    this.from = process.env.EMAIL_FROM || 'Office Time Manager <noreply@localhost>';
+    this.from = process.env.EMAIL_FROM || 'Time Manager <noreply@localhost>';
 
     // Initialize only if email is configured
     if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
@@ -84,22 +84,22 @@ class EmailService {
 
   // Template: Welcome Email
   async sendWelcomeEmail(user) {
-    const subject = 'Welcome to Office Time Manager';
+    const subject = 'Welcome to Time Manager';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2563eb;">Welcome to Office Time Manager! 🎉</h2>
+        <h2 style="color: #2563eb;">Welcome to Time Manager! 🎉</h2>
         <p>Hello ${user.name},</p>
-        <p>Your account has been successfully created. You can now start tracking your office hours.</p>
+        <p>Your account has been successfully created. You can now start tracking your hours.</p>
         <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="margin-top: 0;">Your Account Details:</h3>
           <p><strong>Email:</strong> ${user.email}</p>
           <p><strong>Role:</strong> ${user.role}</p>
           <p><strong>Daily Work Target:</strong> ${user.profile.dailyWorkTarget / 60} hours</p>
         </div>
-        <p>Best regards,<br>Office Time Manager Team</p>
+        <p>Best regards,<br>Time Manager Team</p>
       </div>
     `;
-    const text = `Welcome to Office Time Manager! Hello ${user.name}, your account has been successfully created.`;
+    const text = `Welcome to Time Manager! Hello ${user.name}, your account has been successfully created.`;
 
     return await this.sendEmail({ to: user.email, subject, html, text });
   }
@@ -293,7 +293,7 @@ class EmailService {
         <p style="color: #dc2626; font-weight: 500;">⚠️ Please remember to punch out before leaving in the future.</p>
         <p>If the auto-close time is incorrect, please contact your manager or edit the punch in the system.</p>
         <p><a href="${process.env.FRONTEND_URL}/history" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Punch History</a></p>
-        <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">This is an automated alert from the Office Time Manager system.</p>
+        <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">This is an automated alert from the Time Manager system.</p>
       </div>
     `;
     const text = `Missed Punch Out Alert: You punched IN at ${inTime} on ${date} but forgot to punch OUT. System auto-closed at ${outTime}.`;

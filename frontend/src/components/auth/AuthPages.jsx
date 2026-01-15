@@ -56,7 +56,7 @@ export const LoginPage = () => {
           <div className="w-16 h-16 bg-primary-500 rounded-2xl flex items-center justify-center mx-auto">
             <Clock className="w-10 h-10 text-white" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold text-gray-900">Office Time Manager</h1>
+          <h1 className="mt-4 text-2xl font-bold text-gray-900">Time Manager</h1>
           <p className="text-gray-500 mt-1">Sign in to your account</p>
         </div>
 
@@ -186,7 +186,7 @@ export const RegisterPage = () => {
             <Clock className="w-10 h-10 text-white" />
           </div>
           <h1 className="mt-4 text-2xl font-bold text-gray-900">Create Account</h1>
-          <p className="text-gray-500 mt-1">Join Office Time Manager</p>
+          <p className="text-gray-500 mt-1">Join Time Manager</p>
         </div>
 
         {/* Register Form */}

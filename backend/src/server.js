@@ -36,7 +36,7 @@ try {
 const app = express();
 
 // Log application startup
-logger.info('🚀 Starting Office Time Manager API...');
+logger.info('🚀 Starting Time Manager API...');
 
 // Trust proxy (for rate limiting behind reverse proxy)
 app.set('trust proxy', 1);
@@ -135,7 +135,7 @@ const PORT = config.port;
 const server = app.listen(PORT, () => {
   logger.info(`
 ╔══════════════════════════════════════════════════╗
-║     🕐 Office Time Manager API Server            ║
+║     🕐 Time Manager API Server            ║
 ║══════════════════════════════════════════════════║
 ║  Environment: ${config.nodeEnv.padEnd(34)}║
 ║  Port: ${String(PORT).padEnd(42)}║

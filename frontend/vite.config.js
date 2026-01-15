@@ -9,7 +9,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Office Time Manager',
+        name: 'Time Manager',
         short_name: 'TimeManager',
         description: 'NFC-based Punch In/Punch Out System',
         theme_color: '#3b82f6',

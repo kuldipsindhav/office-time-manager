@@ -1,6 +1,6 @@
 /**
  * Security Middleware Configuration
- * Production-ready security for Office Time Manager
+ * Production-ready security for Time Manager
  */
 
 const helmet = require('helmet');
